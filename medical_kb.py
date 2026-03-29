@@ -83,5 +83,23 @@ def demo():
     ind_fever_cough_flu = pln.induce("Inheritance", "Fever", "Cough", "Flu")
     print(f"Prob( Fever -> Cough | Both caused by Flu) = {ind_fever_cough_flu}")
 
+def demo_forward_chaining():
+    pln = setup_medical_kb()
+    print("\n[Forward Chaining] Generating all possible inferences...")
+    pln.forward_chain(max_steps=5)
+    print("All inferred links (Inheritance):")
+    for (link_type, a, b), stv in pln.links.items():
+        if link_type == "Inheritance":
+            print(f"{a} -> {b}: {stv}")
+
+def demo_backward_chaining():
+    pln = setup_medical_kb()
+    pln.forward_chain(max_steps=2)  # Optionally pre-populate some inferences
+    print("\n[Backward Chaining] Can we infer Patient_A has Flu?")
+    stv = pln.backward_chain("Inheritance", "Patient_A", "Flu", max_depth=4)
+    print(f"Backward chain result: Patient_A -> Flu: {stv}")
+
 if __name__ == "__main__":
     demo()
+    demo_forward_chaining()
+    demo_backward_chaining()
