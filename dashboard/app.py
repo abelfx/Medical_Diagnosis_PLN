@@ -1,0 +1,1 @@
+print("Medical Diagnosis Dashboard")
