@@ -1,46 +1,9 @@
 from pln_math import STV, truth_revision
-from pln_inference import PLNSystem
+from load_metta_kb import load_metta_kb
 
 def setup_medical_kb():
-    pln = PLNSystem()
-    
-    # 1. Base Rates for Medical Conditions and Symptoms (Prior Probabilities)
-    pln.add_concept("Patient_A", STV(1.0, 0.9)) # Patient_A definitely exists
-    pln.add_concept("Patient_B", STV(1.0, 0.9)) # Patient_B definitely exists
-    
-    # Base Probabilities (Very low usually, but increased for demo)
-    pln.add_concept("COVID-19", STV(0.05, 0.8))  
-    pln.add_concept("Flu", STV(0.1, 0.9))       
-    pln.add_concept("CommonCold", STV(0.3, 0.9))
-    
-    pln.add_concept("Fever", STV(0.2, 0.9))
-    pln.add_concept("Cough", STV(0.3, 0.9))
-    pln.add_concept("LossOfTaste", STV(0.01, 0.8))
-
-    # 2. Known Links (Disease -> Symptom or Patient -> Symptom/Disease)
-
-    # Flu -> Fever and Flu -> Cough
-    pln.add_link("Inheritance", "Flu", "Fever", STV(0.8, 0.9))
-    pln.add_link("Inheritance", "Flu", "Cough", STV(0.7, 0.9))
-
-    # COVID-19 -> Fever, COVID-19 -> Cough, COVID-19 -> LossOfTaste
-    pln.add_link("Inheritance", "COVID-19", "Fever", STV(0.85, 0.9))
-    pln.add_link("Inheritance", "COVID-19", "Cough", STV(0.80, 0.9))
-    pln.add_link("Inheritance", "COVID-19", "LossOfTaste", STV(0.60, 0.8))
-
-    # CommonCold -> Cough, CommonCold -> Fever (Rare)
-    pln.add_link("Inheritance", "CommonCold", "Cough", STV(0.9, 0.95))
-    pln.add_link("Inheritance", "CommonCold", "Fever", STV(0.1, 0.8))
-    
-    # Facts about Patients
-    # Patient_A has Fever and Cough
-    pln.add_link("Inheritance", "Patient_A", "Fever", STV(1.0, 0.9)) 
-    pln.add_link("Inheritance", "Patient_A", "Cough", STV(1.0, 0.9))
-    
-    # Patient_B has Loss of Taste
-    pln.add_link("Inheritance", "Patient_B", "LossOfTaste", STV(1.0, 0.9)) 
-
-    return pln
+    # Load the PLN system from the Metta KB file
+    return load_metta_kb("kb/medical_kb.metta")
 
 def demo():
     pln = setup_medical_kb()
