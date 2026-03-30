@@ -9,7 +9,7 @@ class PLNSystem:
         self.concepts[name] = stv
 
     def get_concept(self, name: str) -> STV:
-        return self.concepts.get(name, STV(0.01, 0.5)) # Default small prior
+        return self.concepts.get(name, STV(0.01, 0.5)) 
 
     def add_link(self, link_type: str, a: str, b: str, stv: STV):
         key = (link_type, a, b)
@@ -62,7 +62,7 @@ class PLNSystem:
         stv_b = self.get_concept(b)
         stv_c = self.get_concept(c)
         
-        # In lib_pln.metta Truth_Induction takes T1 as C->A and T2 as C->B
+        # I noticed in the actual pln by opencog Truth_Induction takes T1 as C->A and T2 as C->B
         result = truth_induction(stv_a, stv_b, stv_c, link_ca, link_cb)
         return result
 
@@ -76,7 +76,7 @@ class PLNSystem:
         while new_facts and steps < max_steps:
             new_facts = False
             steps += 1
-            # Snapshot of current links to avoid modifying dict during iteration
+    
             current_links = list(self.links.items())
             for (link_type1, a, b), stv1 in current_links:
                 for (link_type2, b2, c), stv2 in current_links:
