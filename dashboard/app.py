@@ -121,6 +121,34 @@ def main():
                             st.warning(f"Possible: {row['Disease']}")
             else:
                 st.info("No matching disease profiles found.")
+                
+    elif view == "Knowledge Graph":
+        st.header("Logic Trace Explorer")
+        st.markdown("Search through the active links in the Atomspace (Inheritance, Member, etc.)")
+        
+        # Search filter
+        query = st.text_input("Search entity (e.g. 'Patient_A' or 'Flu')").strip()
+        
+        graph_data = []
+        for (lt, a, b), stv in pln.links.items():
+            # Check for matches in Source (a) or Target (b)
+            if not query or query.lower() in a.lower() or query.lower() in b.lower():
+                # Safety check: Ensure stv isn't None
+                s_val = stv.s if stv else 0.0
+                c_val = stv.c if stv else 0.0
+                
+                graph_data.append({
+                    "Source": a, 
+                    "Relation": lt, 
+                    "Target": b, 
+                    "Strength": f"{s_val:.4f}", 
+                    "Confidence": f"{c_val:.4f}"
+                })
+        
+        if graph_data:
+            st.dataframe(pd.DataFrame(graph_data), use_container_width=True, hide_index=True)
+        else:
+            st.info("No matching links found in the current Atomspace.")
 
 if __name__ == "__main__":
     main()
