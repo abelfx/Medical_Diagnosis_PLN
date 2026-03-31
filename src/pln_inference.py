@@ -4,12 +4,16 @@ class PLNSystem:
     def __init__(self):
         self.concepts = {}  # Concept names -> STV (Prior probability)
         self.links = {}     # (LinkType, A, B) -> STV
+        self.types = {}
 
     def add_concept(self, name: str, stv: STV):
         self.concepts[name] = stv
 
     def get_concept(self, name: str) -> STV:
         return self.concepts.get(name, STV(0.01, 0.5)) 
+    
+    def get_type(self, name: str) -> str:
+        return self.types.get(name, "Unknown")
 
     def add_link(self, link_type: str, a: str, b: str, stv: STV):
         key = (link_type, a, b)
@@ -67,10 +71,6 @@ class PLNSystem:
         return result
 
     def forward_chain(self, max_steps=10):
-        """
-        Forward chaining: repeatedly apply inference rules to generate new links until no new facts are found or max_steps is reached.
-        Only applies Deduction, Induction, Abduction for Inheritance links.
-        """
         new_facts = True
         steps = 0
         while new_facts and steps < max_steps:
@@ -79,70 +79,86 @@ class PLNSystem:
     
             current_links = list(self.links.items())
             for (link_type1, a, b), stv1 in current_links:
+                # Deduction: A->B, B->C => A->C
                 for (link_type2, b2, c), stv2 in current_links:
-                    # Deduction: A->B, B->C => A->C
                     if link_type1 == link_type2 and b == b2 and a != c:
                         if self.get_link(link_type1, a, c) is None:
                             deduced = self.deduce(link_type1, a, b, c)
-                            if deduced:
+                            if deduced and deduced.c > 0.01:
                                 self.add_link(link_type1, a, c, deduced)
                                 new_facts = True
-                # Induction: C->A, C->B => A->B
+
+                # Induction: C->A, C->B => A->B (Similarity between Symptoms or Diseases)
                 for (link_type2, c2, b2), stv2 in current_links:
                     if link_type1 == link_type2 and c2 == c and a != b2:
-                        if self.get_link(link_type1, a, b2) is None:
-                            induced = self.induce(link_type1, a, b2, c)
-                            if induced:
-                                self.add_link(link_type1, a, b2, induced)
-                                new_facts = True
-                # Abduction: A->C, B->C => A->B
+                        # Only induce if both are Symptoms or both are Diseases
+                        if self.get_type(a) == self.get_type(b2):
+                            if self.get_link(link_type1, a, b2) is None:
+                                induced = self.induce(link_type1, a, b2, c)
+                                if induced and induced.c > 0.01:
+                                    self.add_link(link_type1, a, b2, induced)
+                                    new_facts = True
+
+                # Abduction: A->C, B->C => A->B (Diagnosis: Patient -> Disease)
                 for (link_type2, b2, c2), stv2 in current_links:
                     if link_type1 == link_type2 and c == c2 and a != b2:
-                        if self.get_link(link_type1, a, b2) is None:
+                        # Only abduce if a is a Patient and b2 is a Disease
+                        if self.get_type(a) == "Patient" and self.get_type(b2) == "Disease":
+                            # We don't check for None here because truth_revision handles updates
                             abduced = self.abduce(link_type1, a, b2, c)
-                            if abduced:
+                            if abduced and abduced.c > 0.01:
+                                old = self.get_link(link_type1, a, b2)
                                 self.add_link(link_type1, a, b2, abduced)
-                                new_facts = True
+                                # If link is new or confidence improved, keep chaining
+                                if old is None or self.links[(link_type1, a, b2)].c > old.c:
+                                    new_facts = True
 
     def backward_chain(self, link_type: str, a: str, b: str, max_depth=5, visited=None):
-        """
-        Backward chaining: try to prove (link_type, a, b) by recursively searching for supporting links.
-        Returns the STV if found or inferred, else None.
-        """
         if visited is None:
             visited = set()
+        
         key = (link_type, a, b)
         if key in visited:
             return None
         visited.add(key)
-        # Direct link
+        
+        # 1. Base Case: Direct link exists
         direct = self.get_link(link_type, a, b)
         if direct:
             return direct
+        
         if max_depth <= 0:
             return None
-        # Try deduction: A->X, X->B => A->B
+
+        # 2. Try Abduction: Patient -> Symptom <- Disease => Patient -> Disease
+        if self.get_type(a) == "Patient" and self.get_type(b) == "Disease":
+            for (lt1, a1, c), stv1 in self.links.items():
+                if lt1 == link_type and a1 == a:
+                    for (lt2, b2, c2), stv2 in self.links.items():
+                        if lt2 == link_type and b2 == b and c2 == c:
+                            res = self.abduce(link_type, a, b, c)
+                            if res and res.c > 0.01:
+                                return res
+
+        # 3. Try Deduction: Patient -> Disease -> Complication => Patient -> Complication
+        # Or: Disease -> Symptom_Group -> Specific_Symptom
         for (lt1, a1, x), stv1 in self.links.items():
             if lt1 == link_type and a1 == a:
-                for (lt2, x2, b2), stv2 in self.links.items():
-                    if lt2 == link_type and x2 == x and b2 == b:
-                        deduced = self.deduce(link_type, a, x, b)
-                        if deduced:
-                            return deduced
-        # Try abduction: A->C, B->C => A->B
-        for (lt1, a1, c), stv1 in self.links.items():
-            if lt1 == link_type and a1 == a:
-                for (lt2, b2, c2), stv2 in self.links.items():
-                    if lt2 == link_type and b2 == b and c2 == c:
-                        abduced = self.abduce(link_type, a, b, c)
-                        if abduced:
-                            return abduced
-        # Try induction: C->A, C->B => A->B
-        for (lt1, c, a1), stv1 in self.links.items():
-            if lt1 == link_type and a1 == a:
-                for (lt2, c2, b2), stv2 in self.links.items():
-                    if lt2 == link_type and c2 == c and b2 == b:
-                        induced = self.induce(link_type, a, b, c)
-                        if induced:
-                            return induced
+                # Recursively try to find/prove the second half of the chain
+                stv_xb = self.backward_chain(link_type, x, b, max_depth - 1, visited)
+                if stv_xb:
+                    res = self.deduce(link_type, a, x, b)
+                    if res and res.c > 0.01:
+                        return res
+
+        # 4. Try Induction: Disease -> Symptom_A & Disease -> Symptom_B => Symptom_A -> Symptom_B
+        if self.get_type(a) == self.get_type(b): # Induction is usually for similarity
+            for (lt1, c, a1), stv1 in self.links.items():
+                if lt1 == link_type and a1 == a:
+                    for (lt2, c2, b2), stv2 in self.links.items():
+                        if lt2 == link_type and c2 == c and b2 == b:
+                            res = self.induce(link_type, a, b, c)
+                            if res and res.c > 0.01:
+                                return res
+
         return None

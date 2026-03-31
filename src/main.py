@@ -4,43 +4,6 @@ from load_metta_kb import load_metta_kb
 def setup_medical_kb():
     return load_metta_kb("../data/medical_kb.metta")
 
-def pln():
-    pln = setup_medical_kb()
-
-    print("--- Medical Diagnosis using PLN ---")
-
-    print("\n[Abduction] What disease might Patient A have given they have a Fever?")
-    # Patient_A -> Fever AND Flu -> Fever => Abduction: Patient_A -> Flu
-    ab_flu = pln.abduce("Inheritance", "Patient_A", "Flu", "Fever")
-    print(f"Prob( Patient_A has Flu | Fever) = {ab_flu}")
-    
-    ab_covid = pln.abduce("Inheritance", "Patient_A", "COVID-19", "Fever")
-    print(f"Prob( Patient_A has COVID-19 | Fever) = {ab_covid}")
-
-    
-    
-    print("\n[Revision] Combining evidence for Patient A (Fever AND Cough for Flu):")
-    # Patient_A -> Cough AND Flu -> Cough => Abduction: Patient_A -> Flu
-    ab_flu_cough = pln.abduce("Inheritance", "Patient_A", "Flu", "Cough")
-    print(f"Prob( Patient_A has Flu | Cough) = {ab_flu_cough}")
-    
-    # Revise both evidences (Fever AND Cough) to get a combined truth value
-    combined_flu = truth_revision(ab_flu, ab_flu_cough)
-    print(f"Revised Prob( Patient_A has Flu | Fever & Cough) = {combined_flu}")
-
-
-
-    print("\n[Deduction] If Patient_B has COVID-19 (let's assume), do they have Fever?")
-    # Patient_B -> COVID-19 (Assumed STV) AND COVID-19 -> Fever => Deduction: Patient_B -> Fever
-    pln.add_link("Inheritance", "Patient_B", "COVID-19", STV(0.9, 0.8))
-    ded_fever = pln.deduce("Inheritance", "Patient_B", "COVID-19", "Fever")
-    print(f"Prob( Patient_B has Fever | Assumed COVID-19) = {ded_fever}")
-
-
-    print("\n[Induction] Relation between Fever and Cough based on shared symptom Flu")
-    ind_fever_cough_flu = pln.induce("Inheritance", "Fever", "Cough", "Flu")
-    print(f"Prob( Fever -> Cough | Both caused by Flu) = {ind_fever_cough_flu}")
-
 def forward_chaining():
     pln = setup_medical_kb()
     print("\n[Forward Chaining] Generating all possible inferences...")
@@ -52,12 +15,56 @@ def forward_chaining():
 
 def backward_chaining():
     pln = setup_medical_kb()
-    pln.forward_chain(max_steps=2)  # Optionally pre-populate some inferences
-    print("\n[Backward Chaining] Can we infer Patient_A has Flu?")
-    stv = pln.backward_chain("Inheritance", "Patient_A", "Flu", max_depth=4)
-    print(f"Backward chain result: Patient_A -> Flu: {stv}")
+    pln.forward_chain(max_steps=2)  
+    print("\n[Backward Chaining] Can we infer Patient_A has COVID-19?")
+    stv = pln.backward_chain("Inheritance", "Patient_A", "BacterialPneumonia", max_depth=4)
+    print(f"Backward chain result: Patient_A -> COVID-19: {stv}")
+
+def diagnose_patient(pln, patient_name: str):
+        """
+        Analyzes a specific patient, identifies their symptoms, 
+        and ranks potential diagnoses based on inferred links.
+        """
+        print(f"\n--- Clinical Report for {patient_name} ---")
+        
+        symptoms = []
+        for (lt, a, b), stv in pln.links.items():
+            if a == patient_name and pln.get_type(b) == "Symptom":
+                symptoms.append(f"{b} (s={stv.s:.2f}, c={stv.c:.2f})")
+        
+        if symptoms:
+            print(f"Known Symptoms: {', '.join(symptoms)}")
+        else:
+            print("No symptoms recorded for this patient.")
+
+        diagnoses = []
+        for (lt, a, b), stv in pln.links.items():
+            if a == patient_name and pln.get_type(b) == "Disease":
+                diagnoses.append((b, stv))
+
+        diagnoses.sort(key=lambda x: (x[1].s, x[1].c), reverse=True)
+
+        print("\nPotential Diagnoses (Ranked):")
+        if not diagnoses:
+            print("  No clear diagnosis found. Further testing required.")
+        else:
+            for disease, stv in diagnoses:
+                status = "HIGH PROBABILITY" if stv.s > 0.7 and stv.c > 0.5 else "CONSIDER"
+                print(f"  [{status}] {disease}: {stv} (Match: {int(stv.s * 100)}%)")
+        print("-" * 40)
 
 if __name__ == "__main__":
-    pln()
-    forward_chaining()
-    backward_chaining()
+    # forward_chaining()
+    # backward_chaining()
+
+    pln = setup_medical_kb()
+
+    # 2. Run the Reasoning Engine
+    print("[Reasoning] Running forward chaining...")
+    pln.forward_chain(max_steps=5)
+    
+    # 3. Perform Diagnoses
+    patients = [p for p, t in pln.types.items() if t == "Patient"]
+    for p in sorted(patients):
+        print(f"\n[Diagnosis] Analyzing {p}...")
+        diagnose_patient(pln, p)

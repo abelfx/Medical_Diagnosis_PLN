@@ -11,17 +11,21 @@ def load_metta_kb(filepath):
                 m = re.match(r'\(= \(STV \(Concept ([^)]+)\)\) \(stv ([0-9.]+) ([0-9.]+)\)\)', line)
                 if m:
                     name, s, c = m.groups()
-                    # print(f"Adding concept: {name} STV({s}, {c})")
                     pln.add_concept(name, STV(float(s), float(c)))
             elif line.startswith('(= (STV (Inheritance'):
                 m = re.match(r'\(= \(STV \(Inheritance \(Concept ([^)]+)\) \(Concept ([^)]+)\)\)\) \(stv ([0-9.]+) ([0-9.]+)\)\)', line)
                 if m:
                     a, b, s, c = m.groups()
-                    # print(f"Adding link: {a} -> {b} STV({s}, {c})")
                     pln.add_link("Inheritance", a, b, STV(float(s), float(c)))
+            # Add this inside your loader loop
+            elif line.startswith('(Member (Concept'):
+                m = re.match(r'\(Member \(Concept ([^)]+)\) ([^)]+)\)', line)
+                if m:
+                    name, c_type = m.groups()
+                    pln.types[name] = c_type 
     return pln
 
-# example usage
+
 if __name__ == "__main__":
     pln = load_metta_kb("../data/medical_kb.metta")
     print("Concepts loaded:")
