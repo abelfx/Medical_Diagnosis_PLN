@@ -64,17 +64,17 @@ def diagnose_patient(pln, patient_name: str):
     print("-" * 60)
 
 if __name__ == "__main__":
-    # forward_chaining()
+    forward_chaining()
     # backward_chaining()
 
-    pln = setup_medical_kb()
+    # pln = setup_medical_kb()
 
-    # 2. Run the Reasoning Engine
-    print("[Reasoning] Running forward chaining...")
-    pln.forward_chain(max_steps=5)
+    # # 2. Run the Reasoning Engine
+    # print("[Reasoning] Running forward chaining...")
+    # pln.forward_chain(max_steps=5)
     
-    # 3. Perform Diagnoses
-    patients = [p for p, t in pln.types.items() if t == "Patient"]
-    for p in sorted(patients):
-        print(f"\n[Diagnosis] Analyzing {p}...")
-        diagnose_patient(pln, p)
+    # # 3. Perform Diagnoses
+    # patients = [p for p, t in pln.types.items() if t == "Patient"]
+    # for p in sorted(patients):
+    #     print(f"\n[Diagnosis] Analyzing {p}...")
+    #     diagnose_patient(pln, p)
