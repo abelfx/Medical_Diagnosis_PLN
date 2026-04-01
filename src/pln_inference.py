@@ -38,6 +38,8 @@ class PLNSystem:
         stv_c = self.get_concept(c)
         
         result = truth_deduction(stv_a, stv_b, stv_c, link_ab, link_bc)
+        if result:
+            result.history = {"rule": "Deduction", "premises": [(link_type, a, b), (link_type, b, c)]}
         return result
 
     def abduce(self, link_type: str, a: str, b: str,  c: str) -> STV:
@@ -53,6 +55,8 @@ class PLNSystem:
         stv_c = self.get_concept(c)
         
         result = truth_abduction(stv_a, stv_b, stv_c, link_ac, link_bc)
+        if result:
+            result.history = {"rule": "Abduction", "premises": [(link_type, a, c), (link_type, b, c)]}
         return result
 
     def induce(self, link_type: str, a: str, b: str, c: str) -> STV:
@@ -68,6 +72,8 @@ class PLNSystem:
         
         # I noticed in the actual pln by opencog Truth_Induction takes T1 as C->A and T2 as C->B
         result = truth_induction(stv_a, stv_b, stv_c, link_ca, link_cb)
+        if result:
+            result.history = {"rule": "Induction", "premises": [(link_type, c, a), (link_type, c, b)]}
         return result
 
     def forward_chain(self, max_steps=10):
@@ -126,6 +132,24 @@ class PLNSystem:
                                 
                                 if old is None or updated.c > old.c:
                                     new_facts = True
+
+    def get_proof_tree(self, link_type: str, a: str, b: str, depth=0) -> str:
+        link = self.get_link(link_type, a, b)
+        indent = "   " * depth
+        if not link:
+            return f"{indent}? Could not find inference for: {a} -> {b}"
+        
+        node_str = f"{indent}Conclusion: ({link_type} {a} {b}) {link}"
+        if link.history:
+            rule = link.history["rule"]
+            premises = link.history["premises"]
+            node_str += f" [Rule: {rule}]\n"
+            for p_lt, p_a, p_b in premises:
+                node_str += self.get_proof_tree(p_lt, p_a, p_b, depth + 1) + "\n"
+        else:
+            node_str += f" [Fact/Prior]"
+            
+        return node_str.rstrip()  # clean trailing newline
 
     def backward_chain(self, link_type: str, a: str, b: str, max_depth=5, visited=None):
         if visited is None:

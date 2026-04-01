@@ -1,7 +1,8 @@
 class STV:
-    def __init__(self, s: float, c: float):
+    def __init__(self, s: float, c: float, history=None):
         self.s = s
         self.c = c
+        self.history = history
 
     def __repr__(self):
         return f"STV(s={self.s:.3f}, c={self.c:.3f})"
@@ -22,12 +23,15 @@ def truth_revision(t1: STV, t2: STV) -> STV:
     w2 = truth_c2w(t2.c)
     w = w1 + w2
     
+    # Preserve the history of the stronger conviction
+    hist = t1.history if t1.c >= t2.c else t2.history
+
     if w == 0:
-        return STV(min(1.0, max(t1.s, t2.s)), min(1.0, max(t1.c, t2.c)))
+        return STV(min(1.0, max(t1.s, t2.s)), min(1.0, max(t1.c, t2.c)), history=hist)
         
     f = safe_div((w1 * t1.s) + (w2 * t2.s), w)
     c = truth_w2c(w)
-    return STV(min(1.0, f), min(1.0, max(c, max(t1.c, t2.c))))
+    return STV(min(1.0, f), min(1.0, max(c, max(t1.c, t2.c))), history=hist)
 
 def truth_deduction(sA: STV, sB: STV, sC: STV, sAB: STV, sBC: STV) -> STV:
     # A -> B, B -> C => A -> C

@@ -60,6 +60,11 @@ def diagnose_patient(pln, patient_name: str):
             status = "HIGH PROBABILITY" if stv.s > 0.7 and stv.c > 0.5 else "CONSIDER"
             match_pct = int(stv.s * 100)
             print(f"  [{status}] {disease:20} | Strength: {stv.s:.2f} | Conf: {stv.c:.2f} | Match: {match_pct}%")
+            
+        print("\n--- Top Proof Tree ---")
+        top_disease = diagnoses[0][0]
+        tree = pln.get_proof_tree("Inheritance", patient_name, top_disease)
+        print(tree)
     
     print("-" * 60)
 
