@@ -65,6 +65,7 @@
 (Inheritance CommonCold Cough 0.85 0.95)
 (Inheritance CommonCold SoreThroat 0.70 0.9)
 (Inheritance CommonCold Fever 0.15 0.85)
+(Inheritance CommonCold BodyAches 0.01 0.99)
 
 ; Seasonal Allergies
 (Inheritance SeasonalAllergies ItchyEyes 0.90 0.95)
