@@ -86,7 +86,7 @@ class PLNSystem:
             current_links = list(self.links.items())
             for (link_type1, a, b), stv1 in current_links:
                 
-                # --- 1. DEDUCTION FIX ---
+                # DEDUCTION
                 # Logic: A->B, B->C => A->C
                 for (link_type2, b2, c), stv2 in current_links:
                     if link_type1 == link_type2 and b == b2 and a != c:
@@ -100,7 +100,7 @@ class PLNSystem:
                                 self.add_link(link_type1, a, c, deduced)
                                 new_facts = True
 
-                # --- 2. INDUCTION FIX ---
+                # INDUCTION
                 # Logic: C->A, C->B => A->B
                 for (link_type2, c2, b2), stv2 in current_links:
                     # FIX: Ensure we are comparing the same source 'a' from the outer loop
@@ -116,7 +116,7 @@ class PLNSystem:
                                     self.add_link(link_type1, b, b2, induced)
                                     new_facts = True
 
-                # --- 3. ABDUCTION (Diagnosis) ---
+                # ABDUCTION (Diagnosis) ---
                 # Logic: A->C, B->C => A->B
                 for (link_type2, b2, c2), stv2 in current_links:
                     if link_type1 == link_type2 and b == c2 and a != b2:

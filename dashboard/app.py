@@ -21,7 +21,7 @@ except ImportError as e:
 # --- Page Configuration ---
 st.set_page_config(page_title="PLN Clinical Intelligence", layout="wide")
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def initialize_engine():
     """Initializes the engine and runs a light forward chain to ground symptoms."""
     kb_path = os.path.join(parent_dir, "data", "medical_kb.metta")
