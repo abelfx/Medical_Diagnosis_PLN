@@ -27,13 +27,9 @@ def initialize_engine():
     kb_path = os.path.join(parent_dir, "data", "medical_kb.metta")
     pln = load_metta_kb(kb_path)
 
-    initial_links = len(pln.links)
-    st.info(f"initial links: {initial_links}")
     # Ground patient-symptom relationships for backward chaining to use
     pln.forward_chain(max_steps=10)
 
-    final_links = len(pln.links)
-    st.info(f"final links: {final_links}")
     return pln
 def main():
     st.title("PLN Medical Diagnostic System")
