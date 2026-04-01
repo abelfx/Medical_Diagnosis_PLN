@@ -2,27 +2,39 @@ import re
 from pln_math import STV
 from pln_inference import PLNSystem
 
+import re
+
 def load_metta_kb(filepath):
     pln = PLNSystem()
     with open(filepath, 'r') as f:
         for line in f:
             line = line.strip()
-            if line.startswith('(= (STV (Concept'):
-                m = re.match(r'\(= \(STV \(Concept ([^)]+)\)\) \(stv ([0-9.]+) ([0-9.]+)\)\)', line)
-                if m:
-                    name, s, c = m.groups()
-                    pln.add_concept(name, STV(float(s), float(c)))
-            elif line.startswith('(= (STV (Inheritance'):
-                m = re.match(r'\(= \(STV \(Inheritance \(Concept ([^)]+)\) \(Concept ([^)]+)\)\)\) \(stv ([0-9.]+) ([0-9.]+)\)\)', line)
-                if m:
-                    a, b, s, c = m.groups()
-                    pln.add_link("Inheritance", a, b, STV(float(s), float(c)))
-            # Add this inside your loader loop
-            elif line.startswith('(Member (Concept'):
+            
+            if not line or line.startswith(';'):
+                continue
+
+            # (Member (Concept Name) Type)
+            if line.startswith('(Member'):
                 m = re.match(r'\(Member \(Concept ([^)]+)\) ([^)]+)\)', line)
                 if m:
                     name, c_type = m.groups()
                     pln.types[name] = c_type 
+
+            # (Inheritance Source Target Strength Confidence)
+            elif line.startswith('(Inheritance'):
+                # Using \s+ to handle any number of spaces between arguments
+                m = re.match(r'\(Inheritance ([^\s]+) ([^\s]+) ([0-9.]+) ([0-9.]+)\)', line)
+                if m:
+                    a, b, s, c = m.groups()
+                    pln.add_link("Inheritance", a, b, STV(float(s), float(c)))
+
+            # (Concept Name Strength Confidence)
+            elif line.startswith('(Concept'):
+                m = re.match(r'\(Concept ([^\s]+) ([0-9.]+) ([0-9.]+)\)', line)
+                if m:
+                    name, s, c = m.groups()
+                    pln.add_concept(name, STV(float(s), float(c)))
+                    
     return pln
 
 

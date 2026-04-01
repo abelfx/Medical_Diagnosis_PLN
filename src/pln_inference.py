@@ -79,38 +79,52 @@ class PLNSystem:
     
             current_links = list(self.links.items())
             for (link_type1, a, b), stv1 in current_links:
-                # Deduction: A->B, B->C => A->C
+                
+                # --- 1. DEDUCTION FIX ---
+                # Logic: A->B, B->C => A->C
                 for (link_type2, b2, c), stv2 in current_links:
                     if link_type1 == link_type2 and b == b2 and a != c:
-                        if self.get_link(link_type1, a, c) is None:
-                            deduced = self.deduce(link_type1, a, b, c)
-                            if deduced and deduced.c > 0.01:
+                        # Get existing link to see if we can improve it
+                        old = self.get_link(link_type1, a, c)
+                        deduced = self.deduce(link_type1, a, b, c)
+                        
+                        if deduced and deduced.c > 0.01:
+                            # Update if it's a new link OR if the new deduction is more confident
+                            if old is None or deduced.c > old.c:
                                 self.add_link(link_type1, a, c, deduced)
                                 new_facts = True
 
-                # Induction: C->A, C->B => A->B (Similarity between Symptoms or Diseases)
+                # --- 2. INDUCTION FIX ---
+                # Logic: C->A, C->B => A->B
                 for (link_type2, c2, b2), stv2 in current_links:
-                    if link_type1 == link_type2 and c2 == c and a != b2:
-                        # Only induce if both are Symptoms or both are Diseases
-                        if self.get_type(a) == self.get_type(b2):
-                            if self.get_link(link_type1, a, b2) is None:
-                                induced = self.induce(link_type1, a, b2, c)
-                                if induced and induced.c > 0.01:
-                                    self.add_link(link_type1, a, b2, induced)
+                    # FIX: Ensure we are comparing the same source 'a' from the outer loop
+                    # Note: a in outer loop is (link_type, a, b). 
+                    # If outer is C->A and inner is C->B:
+                    if link_type1 == link_type2 and a == c2 and b != b2:
+                        if self.get_type(b) == self.get_type(b2):
+                            old = self.get_link(link_type1, b, b2)
+                            induced = self.induce(link_type1, b, b2, a)
+                            
+                            if induced and induced.c > 0.01:
+                                if old is None or induced.c > old.c:
+                                    self.add_link(link_type1, b, b2, induced)
                                     new_facts = True
 
-                # Abduction: A->C, B->C => A->B (Diagnosis: Patient -> Disease)
+                # --- 3. ABDUCTION (Diagnosis) ---
+                # Logic: A->C, B->C => A->B
                 for (link_type2, b2, c2), stv2 in current_links:
-                    if link_type1 == link_type2 and c == c2 and a != b2:
-                        # Only abduce if a is a Patient and b2 is a Disease
+                    if link_type1 == link_type2 and b == c2 and a != b2:
                         if self.get_type(a) == "Patient" and self.get_type(b2) == "Disease":
-                            # We don't check for None here because truth_revision handles updates
-                            abduced = self.abduce(link_type1, a, b2, c)
+                            old = self.get_link(link_type1, a, b2)
+                            abduced = self.abduce(link_type1, a, b2, b)
+                            
                             if abduced and abduced.c > 0.01:
-                                old = self.get_link(link_type1, a, b2)
+                                # truth_revision inside add_link will handle the math,
+                                # but we check confidence to decide if we keep chaining.
                                 self.add_link(link_type1, a, b2, abduced)
-                                # If link is new or confidence improved, keep chaining
-                                if old is None or self.links[(link_type1, a, b2)].c > old.c:
+                                updated = self.get_link(link_type1, a, b2)
+                                
+                                if old is None or updated.c > old.c:
                                     new_facts = True
 
     def backward_chain(self, link_type: str, a: str, b: str, max_depth=5, visited=None):
@@ -122,7 +136,7 @@ class PLNSystem:
             return None
         visited.add(key)
         
-        # 1. Base Case: Direct link exists
+        # Base Case: Direct link exists
         direct = self.get_link(link_type, a, b)
         if direct:
             return direct
@@ -130,7 +144,7 @@ class PLNSystem:
         if max_depth <= 0:
             return None
 
-        # 2. Try Abduction: Patient -> Symptom <- Disease => Patient -> Disease
+        # Try Abduction: Patient -> Symptom <- Disease => Patient -> Disease
         if self.get_type(a) == "Patient" and self.get_type(b) == "Disease":
             for (lt1, a1, c), stv1 in self.links.items():
                 if lt1 == link_type and a1 == a:
@@ -140,7 +154,7 @@ class PLNSystem:
                             if res and res.c > 0.01:
                                 return res
 
-        # 3. Try Deduction: Patient -> Disease -> Complication => Patient -> Complication
+        # Try Deduction: Patient -> Disease -> Complication => Patient -> Complication
         # Or: Disease -> Symptom_Group -> Specific_Symptom
         for (lt1, a1, x), stv1 in self.links.items():
             if lt1 == link_type and a1 == a:
@@ -151,7 +165,7 @@ class PLNSystem:
                     if res and res.c > 0.01:
                         return res
 
-        # 4. Try Induction: Disease -> Symptom_A & Disease -> Symptom_B => Symptom_A -> Symptom_B
+        # Try Induction: Disease -> Symptom_A & Disease -> Symptom_B => Symptom_A -> Symptom_B
         if self.get_type(a) == self.get_type(b): # Induction is usually for similarity
             for (lt1, c, a1), stv1 in self.links.items():
                 if lt1 == link_type and a1 == a:

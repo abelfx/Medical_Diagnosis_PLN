@@ -50,16 +50,16 @@ def truth_deduction(sA: STV, sB: STV, sC: STV, sAB: STV, sBC: STV) -> STV:
 
 def truth_induction(sA: STV, sB: STV, sC: STV, sBA: STV, sBC: STV) -> STV:
     # C -> A, C -> B => A -> B (meaning A->C is reversed or induction over target)
-    # The metta code specifies: sBA, sBC (Wait, C->A is $T1, C->B is $T2. Then $sBA is T1, $sBC is T2)
+    # The metta code specifies: sBA, sBC (C->A is $T1, C->B is $T2. Then $sBA is T1, $sBC is T2)
     s_A, c_A = sA.s, sA.c
     s_B, c_B = sB.s, sB.c
     s_C, c_C = sC.s, sC.c
     s_BA, c_BA = sBA.s, sBA.c
     s_BC, c_BC = sBC.s, sBC.c
     
-    term1 = safe_div(s_BA * s_BC * s_B, s_A)
-    term2_a = 1.0 - safe_div(s_BA * s_B, s_A)
-    term2_b = safe_div(s_C - s_B * s_BC, 1.0 - s_B)
+    term1 = safe_div(s_BA * s_BC * s_C, s_A)
+    term2_a = 1.0 - safe_div(s_BA * s_C, s_A)
+    term2_b = safe_div(s_B - s_C * s_BC, 1.0 - s_C)
     
     s_concl = term1 + (term2_a * term2_b)
     c_concl = truth_w2c(s_BC * c_BC * c_BA)
@@ -74,9 +74,9 @@ def truth_abduction(sA: STV, sB: STV, sC: STV, sAC: STV, sBC: STV) -> STV:
     s_AC, c_AC = sAC.s, sAC.c # in metta: $sAB $cAB  is T1 (A->C)
     s_BC, c_BC = sBC.s, sBC.c # in metta: $sCB $cCB is T2 (B->C)
     
-    term1 = safe_div(s_AC * s_BC * s_C, s_B)
-    term2_a = s_C * (1.0 - s_AC) * (1.0 - s_BC)
-    term2_b = 1.0 - s_B
+    term1 = safe_div(s_AC * s_BC * s_B, s_C)
+    term2_a = s_B * (1.0 - s_AC) * (1.0 - s_BC)
+    term2_b = 1.0 - s_C
     term2 = safe_div(term2_a, term2_b)
     
     s_concl = term1 + term2

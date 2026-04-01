@@ -26,8 +26,10 @@ def initialize_engine():
     """Initializes the engine and runs a light forward chain to ground symptoms."""
     kb_path = os.path.join(parent_dir, "data", "medical_kb.metta")
     pln = load_metta_kb(kb_path)
+
     # Ground patient-symptom relationships for backward chaining to use
-    pln.forward_chain(max_steps=3)
+    pln.forward_chain(max_steps=10)
+
     return pln
 def main():
     st.title("PLN Medical Diagnostic System")
@@ -77,7 +79,7 @@ def main():
                     "Match Certainty": f"{max_s:.2%}"
                 })
         
-        st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(summary_data), width='stretch', hide_index=True)
 
     elif view == "Patient Diagnosis":
         st.header("Targeted Clinical Reasoning")
@@ -91,7 +93,7 @@ def main():
                         if a == selected_patient and pln.get_type(b) == "Symptom"]
             
             if symptoms:
-                st.dataframe(pd.DataFrame(symptoms), hide_index=True, use_container_width=True)
+                st.dataframe(pd.DataFrame(symptoms), hide_index=True, width='stretch')
             else:
                 st.info("No primary symptoms observed.")
 
@@ -146,7 +148,7 @@ def main():
                 })
         
         if graph_data:
-            st.dataframe(pd.DataFrame(graph_data), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(graph_data), width='stretch', hide_index=True)
         else:
             st.info("No matching links found in the current Atomspace.")
 
